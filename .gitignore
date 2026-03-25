@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcbkptlist
+
+# Swift Package Manager
+.build/
+Package.resolved
+
+# Crashlytics
+crashlytics-build.properties
