@@ -32,7 +32,7 @@ struct AddEntryView: View {
     }
     
     var computedCalories: Int {
-        if usePreset || !grams.isEmpty {
+        if !grams.isEmpty {
             guard let cal100 = Double(calories), let g = Double(grams) else { return 0 }
             return Int((cal100 * g) / 100.0)
         }
@@ -74,8 +74,8 @@ struct AddEntryView: View {
                 Section(header: Text(usePreset ? "Preset Details (per 100g)" : "Details")) {
                     TextField("Food name", text: $name)
                     
-                    TextField(usePreset ? "Calories per 100g" : "Total Calories (kcal)", text: $calories)
-                        .keyboardType(usePreset ? .decimalPad : .numberPad)
+                    TextField("Calories per 100g", text: $calories)
+                        .keyboardType(.decimalPad)
                     
                     if usePreset {
                         TextField("Protein per 100g", text: $protein)
@@ -84,32 +84,20 @@ struct AddEntryView: View {
                             .keyboardType(.decimalPad)
                         TextField("Fat per 100g", text: $fat)
                             .keyboardType(.decimalPad)
-                        TextField("Portion (grams)", text: $grams)
-                            .keyboardType(.decimalPad)
                     }
+                    
+                    TextField("Portion (grams)", text: $grams)
+                        .keyboardType(.decimalPad)
                     
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                 }
                 
-                if usePreset {
-                    Section(header: Text("Calculated Totals")) {
-                        HStack { Text("Calories"); Spacer(); Text("\(computedCalories) kcal") }
+                Section(header: Text("Calculated Totals")) {
+                    HStack { Text("Calories"); Spacer(); Text("\(computedCalories) kcal") }
+                    if usePreset {
                         HStack { Text("Protein"); Spacer(); Text(String(format: "%.1fg", computedProtein)) }
                         HStack { Text("Carbs"); Spacer(); Text(String(format: "%.1fg", computedCarbs)) }
                         HStack { Text("Fat"); Spacer(); Text(String(format: "%.1fg", computedFat)) }
-                    }
-                } else {
-                    Section(header: Text("Quick Calories")) {
-                        HStack {
-                            quickAddButton(100)
-                            Spacer()
-                            quickAddButton(300)
-                            Spacer()
-                            quickAddButton(500)
-                            Spacer()
-                            quickAddButton(1000)
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
                     }
                 }
             }
@@ -138,38 +126,18 @@ struct AddEntryView: View {
             return
         }
         name = p.name
-        calories = String(p.caloriesPer100g)
-        protein = String(p.proteinPer100g)
-        carbs = String(p.carbsPer100g)
-        fat = String(p.fatPer100g)
+        calories = String(format: "%g", p.caloriesPer100g)
+        protein = String(format: "%g", p.proteinPer100g)
+        carbs = String(format: "%g", p.carbsPer100g)
+        fat = String(format: "%g", p.fatPer100g)
         if let defaultG = p.defaultGrams {
-            grams = String(defaultG)
+            grams = String(format: "%g", defaultG)
         }
     }
     
     private var isValid: Bool {
         if name.isEmpty { return false }
-        if usePreset {
-            return computedCalories > 0 && Double(grams) != nil
-        } else {
-            return Int(calories) != nil
-        }
-    }
-    
-    private func quickAddButton(_ value: Int) -> some View {
-        Button("+\(value)") {
-            if let current = Int(calories) {
-                calories = String(current + value)
-            } else {
-                calories = String(value)
-            }
-        }
-        .font(.caption)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.orange.opacity(0.2))
-        .foregroundColor(.orange)
-        .clipShape(Capsule())
+        return computedCalories > 0 && Double(grams) != nil
     }
     
     private func save() {
@@ -201,10 +169,10 @@ struct AddEntryView: View {
                 date: finalDate
             )
         } else {
-            let calInt = Int(calories) ?? 0
             newEntry = CalorieEntry(
                 name: name,
-                calories: calInt,
+                calories: computedCalories,
+                grams: Double(grams),
                 date: finalDate
             )
         }
