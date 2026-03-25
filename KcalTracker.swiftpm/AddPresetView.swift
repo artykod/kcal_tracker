@@ -5,12 +5,24 @@ struct AddPresetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
-    @State private var name: String = ""
-    @State private var calories: String = ""
-    @State private var protein: String = ""
-    @State private var carbs: String = ""
-    @State private var fat: String = ""
-    @State private var defaultGrams: String = ""
+    var presetToEdit: FoodPreset?
+    
+    @State private var name: String
+    @State private var calories: String
+    @State private var protein: String
+    @State private var carbs: String
+    @State private var fat: String
+    @State private var defaultGrams: String
+    
+    init(presetToEdit: FoodPreset? = nil) {
+        self.presetToEdit = presetToEdit
+        _name = State(initialValue: presetToEdit?.name ?? "")
+        _calories = State(initialValue: presetToEdit.map { String(format: "%g", $0.caloriesPer100g) } ?? "")
+        _protein = State(initialValue: presetToEdit.map { String(format: "%g", $0.proteinPer100g) } ?? "")
+        _carbs = State(initialValue: presetToEdit.map { String(format: "%g", $0.carbsPer100g) } ?? "")
+        _fat = State(initialValue: presetToEdit.map { String(format: "%g", $0.fatPer100g) } ?? "")
+        _defaultGrams = State(initialValue: presetToEdit?.defaultGrams.map { String(format: "%g", $0) } ?? "")
+    }
     
     var body: some View {
         NavigationStack {
@@ -35,7 +47,7 @@ struct AddPresetView: View {
                         .keyboardType(.decimalPad)
                 }
             }
-            .navigationTitle("New Preset")
+            .navigationTitle(presetToEdit != nil ? "Edit Preset" : "New Preset")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -60,8 +72,19 @@ struct AddPresetView: View {
               let f = Double(fat) else { return }
         
         let grams = Double(defaultGrams)
-        let preset = FoodPreset(name: name, caloriesPer100g: cal, proteinPer100g: p, carbsPer100g: c, fatPer100g: f, defaultGrams: grams)
-        modelContext.insert(preset)
+        
+        if let existing = presetToEdit {
+            existing.name = name
+            existing.caloriesPer100g = cal
+            existing.proteinPer100g = p
+            existing.carbsPer100g = c
+            existing.fatPer100g = f
+            existing.defaultGrams = grams
+        } else {
+            let preset = FoodPreset(name: name, caloriesPer100g: cal, proteinPer100g: p, carbsPer100g: c, fatPer100g: f, defaultGrams: grams)
+            modelContext.insert(preset)
+        }
+        
         dismiss()
     }
 }

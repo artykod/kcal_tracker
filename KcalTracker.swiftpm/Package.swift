@@ -8,13 +8,13 @@ import PackageDescription
 import AppleProductTypes
 
 let package = Package(
-    name: "KcalTracker",
+    name: "Calories Tracker",
     platforms: [
         .iOS("17.0")
     ],
     products: [
         .iOSApplication(
-            name: "KcalTracker",
+            name: "Calories Tracker",
             targets: ["AppModule"],
             bundleIdentifier: "com.home.kcaltracker",
             teamIdentifier: "SRJF26L2J2",

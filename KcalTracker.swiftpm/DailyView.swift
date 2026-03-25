@@ -1,11 +1,21 @@
 import SwiftUI
 import SwiftData
 
+struct CopiedEntry: Codable {
+    var name: String
+    var calories: Int
+    var protein: Double?
+    var carbs: Double?
+    var fat: Double?
+    var grams: Double?
+}
+
 struct DailyView: View {
     let date: Date
     @Environment(\.modelContext) private var modelContext
     @Query private var entries: [CalorieEntry]
     @State private var showingAddEntry = false
+    @AppStorage("copiedEntryData") private var copiedEntryData: Data = Data()
     
     init(date: Date) {
         self.date = date
@@ -25,6 +35,11 @@ struct DailyView: View {
     var totalProtein: Double { entries.reduce(0) { $0 + ($1.protein ?? 0) } }
     var totalCarbs: Double { entries.reduce(0) { $0 + ($1.carbs ?? 0) } }
     var totalFat: Double { entries.reduce(0) { $0 + ($1.fat ?? 0) } }
+    
+    private var copiedEntry: CopiedEntry? {
+        guard !copiedEntryData.isEmpty else { return nil }
+        return try? JSONDecoder().decode(CopiedEntry.self, from: copiedEntryData)
+    }
     
     var body: some View {
         ZStack {
@@ -85,6 +100,14 @@ struct DailyView: View {
                                 Text("\(entry.calories) kcal")
                                     .fontWeight(.semibold)
                             }
+                            .swipeActions(edge: .leading) {
+                                Button {
+                                    copyToClipboard(entry)
+                                } label: {
+                                    Label("Copy", systemImage: "doc.on.doc")
+                                }
+                                .tint(.blue)
+                            }
                         }
                         .onDelete(perform: deleteItems)
                     }
@@ -93,23 +116,70 @@ struct DailyView: View {
             
             VStack {
                 Spacer()
-                Button(action: {
-                    showingAddEntry = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title.weight(.semibold))
-                        .padding(16)
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .clipShape(Circle())
-                        .shadow(radius: 4, x: 0, y: 4)
+                HStack(spacing: 16) {
+                    if copiedEntry != nil {
+                        Button(action: pasteEntry) {
+                            Image(systemName: "doc.on.clipboard")
+                                .font(.title.weight(.semibold))
+                                .padding(16)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .clipShape(Circle())
+                                .shadow(radius: 4, x: 0, y: 4)
+                        }
+                        .transition(.scale.combined(with: .opacity))
+                    }
+                    
+                    Button(action: {
+                        showingAddEntry = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title.weight(.semibold))
+                            .padding(16)
+                            .background(Color.orange)
+                            .foregroundColor(.white)
+                            .clipShape(Circle())
+                            .shadow(radius: 4, x: 0, y: 4)
+                    }
                 }
                 .padding(.bottom, 24)
             }
         }
+        .animation(.spring(), value: copiedEntryData)
         .sheet(isPresented: $showingAddEntry) {
             AddEntryView(date: date)
         }
+    }
+    
+    private func copyToClipboard(_ entry: CalorieEntry) {
+        let copied = CopiedEntry(name: entry.name, calories: entry.calories, protein: entry.protein, carbs: entry.carbs, fat: entry.fat, grams: entry.grams)
+        if let data = try? JSONEncoder().encode(copied) {
+            copiedEntryData = data
+        }
+    }
+    
+    private func pasteEntry() {
+        guard let copied = copiedEntry else { return }
+        
+        // Pasting entry should default to midday or current time if it's today
+        let pasteTime: Date
+        if Calendar.current.isDateInToday(date) {
+            pasteTime = Date()
+        } else {
+            let startOfDay = Calendar.current.startOfDay(for: date)
+            pasteTime = Calendar.current.date(byAdding: .hour, value: 12, to: startOfDay) ?? startOfDay
+        }
+        
+        let newEntry = CalorieEntry(
+            name: copied.name,
+            calories: copied.calories,
+            protein: copied.protein,
+            carbs: copied.carbs,
+            fat: copied.fat,
+            grams: copied.grams,
+            date: pasteTime
+        )
+        modelContext.insert(newEntry)
     }
     
     private func deleteItems(offsets: IndexSet) {

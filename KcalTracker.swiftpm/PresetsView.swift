@@ -5,6 +5,7 @@ struct PresetsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FoodPreset.name) private var presets: [FoodPreset]
     @State private var showingAddPreset = false
+    @State private var presetToEdit: FoodPreset?
     
     var body: some View {
         List {
@@ -13,21 +14,29 @@ struct PresetsView: View {
                     .foregroundColor(.secondary)
             } else {
                 ForEach(presets) { preset in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(preset.name)
-                            .font(.headline)
-                        
-                        Text("\(Int(preset.caloriesPer100g)) kcal / 100g")
-                            .font(.subheadline)
-                        
-                        HStack(spacing: 12) {
-                            MacroText(label: "P", value: preset.proteinPer100g)
-                            MacroText(label: "C", value: preset.carbsPer100g)
-                            MacroText(label: "F", value: preset.fatPer100g)
+                    Button(action: {
+                        presetToEdit = preset
+                    }) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(preset.name)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Text("\(Int(preset.caloriesPer100g)) kcal / 100g")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            HStack(spacing: 12) {
+                                MacroText(label: "P", value: preset.proteinPer100g)
+                                MacroText(label: "C", value: preset.carbsPer100g)
+                                MacroText(label: "F", value: preset.fatPer100g)
+                            }
+                            .font(.caption)
                         }
-                        .font(.caption)
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.vertical, 4)
+                    .buttonStyle(PlainButtonStyle())
                 }
                 .onDelete(perform: deleteItems)
             }
@@ -35,13 +44,18 @@ struct PresetsView: View {
         .navigationTitle("Food Presets")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingAddPreset = true }) {
+                Button(action: {
+                    showingAddPreset = true
+                }) {
                     Image(systemName: "plus")
                 }
             }
         }
         .sheet(isPresented: $showingAddPreset) {
-            AddPresetView()
+            AddPresetView(presetToEdit: nil)
+        }
+        .sheet(item: $presetToEdit) { preset in
+            AddPresetView(presetToEdit: preset)
         }
     }
     

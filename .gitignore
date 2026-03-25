@@ -13,3 +13,5 @@ Package.resolved
 
 # Crashlytics
 crashlytics-build.properties
+
+main
