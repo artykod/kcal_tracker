@@ -41,7 +41,7 @@ struct ContentView: View {
                 
                 DailyView(date: selectedDate)
             }
-            .navigationTitle("Kcal Tracker")
+            .navigationTitle("Calories Tracker")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
