@@ -1,6 +1,20 @@
 import SwiftUI
 import SwiftData
 
+private func parseDouble(_ s: String) -> Double? {
+    let normalized = s.replacingOccurrences(of: Locale.current.decimalSeparator ?? ",", with: ".")
+    return Double(normalized)
+}
+
+private func formatDouble(_ v: Double) -> String {
+    let fmt = NumberFormatter()
+    fmt.locale = Locale.current
+    fmt.numberStyle = .decimal
+    fmt.maximumFractionDigits = 10
+    fmt.groupingSeparator = ""
+    return fmt.string(from: NSNumber(value: v)) ?? "\(v)"
+}
+
 struct AddPresetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -17,11 +31,11 @@ struct AddPresetView: View {
     init(presetToEdit: FoodPreset? = nil) {
         self.presetToEdit = presetToEdit
         _name = State(initialValue: presetToEdit?.name ?? "")
-        _calories = State(initialValue: presetToEdit.map { String(format: "%g", $0.caloriesPer100g) } ?? "")
-        _protein = State(initialValue: presetToEdit.map { String(format: "%g", $0.proteinPer100g) } ?? "")
-        _carbs = State(initialValue: presetToEdit.map { String(format: "%g", $0.carbsPer100g) } ?? "")
-        _fat = State(initialValue: presetToEdit.map { String(format: "%g", $0.fatPer100g) } ?? "")
-        _defaultGrams = State(initialValue: presetToEdit?.defaultGrams.map { String(format: "%g", $0) } ?? "")
+        _calories = State(initialValue: presetToEdit.map { formatDouble($0.caloriesPer100g) } ?? "")
+        _protein = State(initialValue: presetToEdit.map { formatDouble($0.proteinPer100g) } ?? "")
+        _carbs = State(initialValue: presetToEdit.map { formatDouble($0.carbsPer100g) } ?? "")
+        _fat = State(initialValue: presetToEdit.map { formatDouble($0.fatPer100g) } ?? "")
+        _defaultGrams = State(initialValue: presetToEdit?.defaultGrams.map { formatDouble($0) } ?? "")
     }
     
     var body: some View {
@@ -62,16 +76,16 @@ struct AddPresetView: View {
     }
     
     private var isValid: Bool {
-        !name.isEmpty && Double(calories) != nil && Double(protein) != nil && Double(carbs) != nil && Double(fat) != nil
+        !name.isEmpty && parseDouble(calories) != nil && parseDouble(protein) != nil && parseDouble(carbs) != nil && parseDouble(fat) != nil
     }
     
     private func save() {
-        guard let cal = Double(calories),
-              let p = Double(protein),
-              let c = Double(carbs),
-              let f = Double(fat) else { return }
+        guard let cal = parseDouble(calories),
+              let p = parseDouble(protein),
+              let c = parseDouble(carbs),
+              let f = parseDouble(fat) else { return }
         
-        let grams = Double(defaultGrams)
+        let grams = parseDouble(defaultGrams)
         
         if let existing = presetToEdit {
             existing.name = name

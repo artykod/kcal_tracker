@@ -1,6 +1,11 @@
 import SwiftUI
 import SwiftData
 
+private func parseDouble(_ s: String) -> Double? {
+    let normalized = s.replacingOccurrences(of: Locale.current.decimalSeparator ?? ",", with: ".")
+    return Double(normalized)
+}
+
 struct AddEntryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -33,22 +38,22 @@ struct AddEntryView: View {
     
     var computedCalories: Int {
         if !grams.isEmpty {
-            guard let cal100 = Double(calories), let g = Double(grams) else { return 0 }
+            guard let cal100 = parseDouble(calories), let g = parseDouble(grams) else { return 0 }
             return Int((cal100 * g) / 100.0)
         }
-        return Int(calories) ?? 0
+        return Int(parseDouble(calories) ?? 0)
     }
     
     var computedProtein: Double {
-        guard let p = Double(protein), let g = Double(grams) else { return 0 }
+        guard let p = parseDouble(protein), let g = parseDouble(grams) else { return 0 }
         return (p * g) / 100.0
     }
     var computedCarbs: Double {
-        guard let c = Double(carbs), let g = Double(grams) else { return 0 }
+        guard let c = parseDouble(carbs), let g = parseDouble(grams) else { return 0 }
         return (c * g) / 100.0
     }
     var computedFat: Double {
-        guard let f = Double(fat), let g = Double(grams) else { return 0 }
+        guard let f = parseDouble(fat), let g = parseDouble(grams) else { return 0 }
         return (f * g) / 100.0
     }
     
@@ -125,19 +130,25 @@ struct AddEntryView: View {
             grams = ""
             return
         }
+        let fmt = NumberFormatter()
+        fmt.locale = Locale.current
+        fmt.numberStyle = .decimal
+        fmt.maximumFractionDigits = 10
+        fmt.groupingSeparator = ""
+        func str(_ v: Double) -> String { fmt.string(from: NSNumber(value: v)) ?? "\(v)" }
         name = p.name
-        calories = String(format: "%g", p.caloriesPer100g)
-        protein = String(format: "%g", p.proteinPer100g)
-        carbs = String(format: "%g", p.carbsPer100g)
-        fat = String(format: "%g", p.fatPer100g)
+        calories = str(p.caloriesPer100g)
+        protein = str(p.proteinPer100g)
+        carbs = str(p.carbsPer100g)
+        fat = str(p.fatPer100g)
         if let defaultG = p.defaultGrams {
-            grams = String(format: "%g", defaultG)
+            grams = str(defaultG)
         }
     }
     
     private var isValid: Bool {
         if name.isEmpty { return false }
-        return computedCalories > 0 && Double(grams) != nil
+        return computedCalories > 0 && parseDouble(grams) != nil
     }
     
     private func save() {
@@ -165,14 +176,14 @@ struct AddEntryView: View {
                 protein: computedProtein,
                 carbs: computedCarbs,
                 fat: computedFat,
-                grams: Double(grams),
+                grams: parseDouble(grams),
                 date: finalDate
             )
         } else {
             newEntry = CalorieEntry(
                 name: name,
                 calories: computedCalories,
-                grams: Double(grams),
+                grams: parseDouble(grams),
                 date: finalDate
             )
         }
