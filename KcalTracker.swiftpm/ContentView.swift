@@ -44,9 +44,12 @@ struct ContentView: View {
             .navigationTitle("Calories Tracker")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItemGroup(placement: .topBarLeading) {
                     NavigationLink(destination: PresetsView()) {
                         Image(systemName: "list.bullet.clipboard")
+                    }
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gearshape")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
