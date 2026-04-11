@@ -17,7 +17,7 @@ let package = Package(
             name: "Calories Tracker",
             targets: ["AppModule"],
             bundleIdentifier: "com.home.kcaltracker",
-            teamIdentifier: "SRJF26L2J2",
+            teamIdentifier: "L82GX97HTY",
             displayVersion: "1.0",
             bundleVersion: "1",
             appIcon: .asset("AppIcon"),
