@@ -3,12 +3,12 @@ import SwiftData
 
 @Model
 final class FoodPreset {
-    var id: UUID
-    var name: String
-    var caloriesPer100g: Double
-    var proteinPer100g: Double
-    var carbsPer100g: Double
-    var fatPer100g: Double
+    var id: UUID = UUID()
+    var name: String = ""
+    var caloriesPer100g: Double = 0.0
+    var proteinPer100g: Double = 0.0
+    var carbsPer100g: Double = 0.0
+    var fatPer100g: Double = 0.0
     var defaultGrams: Double?
     
     init(name: String, caloriesPer100g: Double, proteinPer100g: Double, carbsPer100g: Double, fatPer100g: Double, defaultGrams: Double? = nil) {
