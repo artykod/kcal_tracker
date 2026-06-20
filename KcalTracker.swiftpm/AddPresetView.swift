@@ -20,6 +20,7 @@ struct AddPresetView: View {
     @Environment(\.dismiss) private var dismiss
     
     var presetToEdit: FoodPreset?
+    var presetToCopy: FoodPreset?
     
     @State private var name: String
     @State private var calories: String
@@ -28,14 +29,31 @@ struct AddPresetView: View {
     @State private var fat: String
     @State private var defaultGrams: String
     
-    init(presetToEdit: FoodPreset? = nil) {
+    init(presetToEdit: FoodPreset? = nil, presetToCopy: FoodPreset? = nil, entryToCopy: CalorieEntry? = nil) {
         self.presetToEdit = presetToEdit
-        _name = State(initialValue: presetToEdit?.name ?? "")
-        _calories = State(initialValue: presetToEdit.map { formatDouble($0.caloriesPer100g) } ?? "")
-        _protein = State(initialValue: presetToEdit.map { formatDouble($0.proteinPer100g) } ?? "")
-        _carbs = State(initialValue: presetToEdit.map { formatDouble($0.carbsPer100g) } ?? "")
-        _fat = State(initialValue: presetToEdit.map { formatDouble($0.fatPer100g) } ?? "")
-        _defaultGrams = State(initialValue: presetToEdit?.defaultGrams.map { formatDouble($0) } ?? "")
+        self.presetToCopy = presetToCopy
+        let source = presetToEdit ?? presetToCopy
+        let initialName = presetToEdit?.name ?? entryToCopy?.name ?? ""
+        _name = State(initialValue: initialName)
+
+        if let entry = entryToCopy, let grams = entry.grams, grams > 0 {
+            let caloriesPer100g = entry.caloriesPer100g ?? (Double(entry.calories) * 100 / grams)
+            let proteinPer100g = entry.proteinPer100g ?? entry.protein.map { $0 * 100 / grams } ?? 0
+            let carbsPer100g = entry.carbsPer100g ?? entry.carbs.map { $0 * 100 / grams } ?? 0
+            let fatPer100g = entry.fatPer100g ?? entry.fat.map { $0 * 100 / grams } ?? 0
+
+            _calories = State(initialValue: formatDouble(caloriesPer100g))
+            _protein = State(initialValue: formatDouble(proteinPer100g))
+            _carbs = State(initialValue: formatDouble(carbsPer100g))
+            _fat = State(initialValue: formatDouble(fatPer100g))
+            _defaultGrams = State(initialValue: formatDouble(grams))
+        } else {
+            _calories = State(initialValue: source.map { formatDouble($0.caloriesPer100g) } ?? "")
+            _protein = State(initialValue: source.map { formatDouble($0.proteinPer100g) } ?? "")
+            _carbs = State(initialValue: source.map { formatDouble($0.carbsPer100g) } ?? "")
+            _fat = State(initialValue: source.map { formatDouble($0.fatPer100g) } ?? "")
+            _defaultGrams = State(initialValue: source?.defaultGrams.map { formatDouble($0) } ?? "")
+        }
     }
     
     var body: some View {

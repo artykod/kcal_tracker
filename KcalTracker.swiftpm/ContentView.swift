@@ -45,6 +45,9 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
+                    NavigationLink(destination: SearchEntriesView()) {
+                        Image(systemName: "magnifyingglass")
+                    }
                     NavigationLink(destination: PresetsView()) {
                         Image(systemName: "list.bullet.clipboard")
                     }

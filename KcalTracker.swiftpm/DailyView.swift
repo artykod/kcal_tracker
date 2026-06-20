@@ -1,21 +1,14 @@
 import SwiftUI
 import SwiftData
 
-struct CopiedEntry: Codable {
-    var name: String
-    var calories: Int
-    var protein: Double?
-    var carbs: Double?
-    var fat: Double?
-    var grams: Double?
-}
-
 struct DailyView: View {
     let date: Date
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entryClipboard: EntryClipboard
     @Query private var entries: [CalorieEntry]
     @State private var showingAddEntry = false
-    @AppStorage("copiedEntryData") private var copiedEntryData: Data = Data()
+    @State private var editingEntry: CalorieEntry?
+    @State private var entryToCreatePreset: CalorieEntry?
     
     init(date: Date) {
         self.date = date
@@ -35,11 +28,6 @@ struct DailyView: View {
     var totalProtein: Double { entries.reduce(0) { $0 + ($1.protein ?? 0) } }
     var totalCarbs: Double { entries.reduce(0) { $0 + ($1.carbs ?? 0) } }
     var totalFat: Double { entries.reduce(0) { $0 + ($1.fat ?? 0) } }
-    
-    private var copiedEntry: CopiedEntry? {
-        guard !copiedEntryData.isEmpty else { return nil }
-        return try? JSONDecoder().decode(CopiedEntry.self, from: copiedEntryData)
-    }
     
     var body: some View {
         ZStack {
@@ -81,9 +69,15 @@ struct DailyView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(entry.name)
                                         .font(.headline)
-                                    Text(entry.date.formatted(date: .omitted, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                    HStack(spacing: 4) {
+                                        Text(entry.date.formatted(date: .omitted, time: .shortened))
+                                        if let grams = entry.grams {
+                                            Text("\u{2022}")
+                                            Text("\(grams.formatted(.number.precision(.fractionLength(0...2)))) g")
+                                        }
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                                     
                                     if entry.protein != nil || entry.carbs != nil || entry.fat != nil {
                                         HStack(spacing: 8) {
@@ -100,6 +94,10 @@ struct DailyView: View {
                                 Text("\(entry.calories) kcal")
                                     .fontWeight(.semibold)
                             }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                editingEntry = entry
+                            }
                             .swipeActions(edge: .leading) {
                                 Button {
                                     copyToClipboard(entry)
@@ -107,6 +105,22 @@ struct DailyView: View {
                                     Label("Copy", systemImage: "doc.on.doc")
                                 }
                                 .tint(.blue)
+
+                                Button {
+                                    editingEntry = entry
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.orange)
+
+                                if let grams = entry.grams, grams > 0 {
+                                    Button {
+                                        entryToCreatePreset = entry
+                                    } label: {
+                                        Label("Make Preset", systemImage: "list.bullet.clipboard")
+                                    }
+                                    .tint(.green)
+                                }
                             }
                         }
                         .onDelete(perform: deleteItems)
@@ -117,7 +131,7 @@ struct DailyView: View {
             VStack {
                 Spacer()
                 HStack(spacing: 16) {
-                    if copiedEntry != nil {
+                    if entryClipboard.copiedEntry != nil {
                         Button(action: pasteEntry) {
                             Image(systemName: "doc.on.clipboard")
                                 .font(.title.weight(.semibold))
@@ -145,21 +159,24 @@ struct DailyView: View {
                 .padding(.bottom, 24)
             }
         }
-        .animation(.spring(), value: copiedEntryData)
+        .animation(.spring(), value: entryClipboard.copiedEntry != nil)
         .sheet(isPresented: $showingAddEntry) {
             AddEntryView(date: date)
+        }
+        .sheet(item: $editingEntry) { entry in
+            EditEntryPortionView(entry: entry)
+        }
+        .sheet(item: $entryToCreatePreset) { entry in
+            AddPresetView(entryToCopy: entry)
         }
     }
     
     private func copyToClipboard(_ entry: CalorieEntry) {
-        let copied = CopiedEntry(name: entry.name, calories: entry.calories, protein: entry.protein, carbs: entry.carbs, fat: entry.fat, grams: entry.grams)
-        if let data = try? JSONEncoder().encode(copied) {
-            copiedEntryData = data
-        }
+        entryClipboard.copy(entry)
     }
     
     private func pasteEntry() {
-        guard let copied = copiedEntry else { return }
+        guard let copied = entryClipboard.copiedEntry else { return }
         
         // Pasting entry should default to midday or current time if it's today
         let pasteTime: Date
@@ -177,6 +194,10 @@ struct DailyView: View {
             carbs: copied.carbs,
             fat: copied.fat,
             grams: copied.grams,
+            caloriesPer100g: copied.caloriesPer100g,
+            proteinPer100g: copied.proteinPer100g,
+            carbsPer100g: copied.carbsPer100g,
+            fatPer100g: copied.fatPer100g,
             date: pasteTime
         )
         modelContext.insert(newEntry)

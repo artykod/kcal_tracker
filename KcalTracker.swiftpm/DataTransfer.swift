@@ -17,6 +17,10 @@ struct CalorieEntryDTO: Codable {
     var carbs: Double?
     var fat: Double?
     var grams: Double?
+    var caloriesPer100g: Double?
+    var proteinPer100g: Double?
+    var carbsPer100g: Double?
+    var fatPer100g: Double?
     var date: Date
     
     init(from model: CalorieEntry) {
@@ -27,6 +31,10 @@ struct CalorieEntryDTO: Codable {
         self.carbs = model.carbs
         self.fat = model.fat
         self.grams = model.grams
+        self.caloriesPer100g = model.caloriesPer100g
+        self.proteinPer100g = model.proteinPer100g
+        self.carbsPer100g = model.carbsPer100g
+        self.fatPer100g = model.fatPer100g
         self.date = model.date
     }
 }
@@ -128,6 +136,10 @@ class DataTransferManager: ObservableObject {
                     carbs: entryDTO.carbs,
                     fat: entryDTO.fat,
                     grams: entryDTO.grams,
+                    caloriesPer100g: entryDTO.caloriesPer100g,
+                    proteinPer100g: entryDTO.proteinPer100g,
+                    carbsPer100g: entryDTO.carbsPer100g,
+                    fatPer100g: entryDTO.fatPer100g,
                     date: entryDTO.date
                 )
                 // Use the original id from the backup

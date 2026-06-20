@@ -9,13 +9,12 @@ private func parseDouble(_ s: String) -> Double? {
 struct AddEntryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \FoodPreset.name) private var presets: [FoodPreset]
     
     var date: Date
     
     @State private var time: Date
-    @State private var usePreset = true
     @State private var selectedPreset: FoodPreset?
+    @State private var showingPresetSelector = false
     
     // Manual or Preset values
     @State private var name: String = ""
@@ -24,6 +23,9 @@ struct AddEntryView: View {
     @State private var carbs: String = ""
     @State private var fat: String = ""
     @State private var grams: String = ""
+    @State private var servingCount = 1
+    @State private var draftServingCount = 1
+    @State private var showingServingPicker = false
     
     init(date: Date) {
         self.date = date
@@ -37,71 +39,111 @@ struct AddEntryView: View {
     }
     
     var computedCalories: Int {
-        if !grams.isEmpty {
-            guard let cal100 = parseDouble(calories), let g = parseDouble(grams) else { return 0 }
-            return Int((cal100 * g) / 100.0)
-        }
-        return Int(parseDouble(calories) ?? 0)
+        guard let cal100 = parseDouble(calories), let totalGrams else { return 0 }
+        return Int((cal100 * totalGrams) / 100.0)
     }
     
     var computedProtein: Double {
-        guard let p = parseDouble(protein), let g = parseDouble(grams) else { return 0 }
-        return (p * g) / 100.0
+        guard let p = parseDouble(protein), let totalGrams else { return 0 }
+        return (p * totalGrams) / 100.0
     }
     var computedCarbs: Double {
-        guard let c = parseDouble(carbs), let g = parseDouble(grams) else { return 0 }
-        return (c * g) / 100.0
+        guard let c = parseDouble(carbs), let totalGrams else { return 0 }
+        return (c * totalGrams) / 100.0
     }
     var computedFat: Double {
-        guard let f = parseDouble(fat), let g = parseDouble(grams) else { return 0 }
-        return (f * g) / 100.0
+        guard let f = parseDouble(fat), let totalGrams else { return 0 }
+        return (f * totalGrams) / 100.0
+    }
+
+    var totalGrams: Double? {
+        guard let portionGrams = parseDouble(grams), portionGrams > 0 else { return nil }
+        return portionGrams * Double(servingCount)
+    }
+
+    var finalEntryName: String {
+        servingCount == 1 ? name : "\(name) ×\(servingCount)"
     }
     
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Toggle("Use Food Preset", isOn: $usePreset)
-                    
-                    if usePreset {
-                        Picker("Preset", selection: $selectedPreset) {
-                            Text("Select Preset").tag(FoodPreset?.none)
-                            ForEach(presets) { preset in
-                                Text(preset.name).tag(preset as FoodPreset?)
-                            }
+                Section("Food Preset (Optional)") {
+                    Button {
+                        showingPresetSelector = true
+                    } label: {
+                        HStack {
+                            Text("Preset")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(selectedPreset?.name ?? "No Preset")
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
-                        .onChange(of: selectedPreset) { _, newValue in
-                            applyPreset(newValue)
-                        }
+                    }
+                    .onChange(of: selectedPreset) { _, newValue in
+                        applyPreset(newValue)
                     }
                 }
                 
-                Section(header: Text(usePreset ? "Preset Details (per 100g)" : "Details")) {
+                Section {
                     TextField("Food name", text: $name)
                     
                     TextField("Calories per 100g", text: $calories)
                         .keyboardType(.decimalPad)
                     
-                    if usePreset {
-                        TextField("Protein per 100g", text: $protein)
-                            .keyboardType(.decimalPad)
-                        TextField("Carbs per 100g", text: $carbs)
-                            .keyboardType(.decimalPad)
-                        TextField("Fat per 100g", text: $fat)
-                            .keyboardType(.decimalPad)
-                    }
+                    TextField("Protein (optional)", text: $protein)
+                        .keyboardType(.decimalPad)
+                    TextField("Carbs (optional)", text: $carbs)
+                        .keyboardType(.decimalPad)
+                    TextField("Fat (optional)", text: $fat)
+                        .keyboardType(.decimalPad)
                     
                     TextField("Portion (grams)", text: $grams)
                         .keyboardType(.decimalPad)
+
+                    Button {
+                        draftServingCount = servingCount
+                        showingServingPicker = true
+                    } label: {
+                        HStack {
+                            Text("Number of Servings")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("\(servingCount)")
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                     
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                } header: {
+                    Text("Details (per 100g)")
+                } footer: {
+                    Text("Servings is a multiplier. For example, a 150 g portion with 2 servings adds 300 g and doubles calories and macros.")
                 }
                 
                 Section(header: Text("Calculated Totals")) {
+                    if let totalGrams {
+                        HStack {
+                            Text("Total Portion")
+                            Spacer()
+                            Text("\(totalGrams.formatted(.number.precision(.fractionLength(0...2)))) g")
+                        }
+                    }
                     HStack { Text("Calories"); Spacer(); Text("\(computedCalories) kcal") }
-                    if usePreset {
+                    if parseDouble(protein) != nil {
                         HStack { Text("Protein"); Spacer(); Text(String(format: "%.1fg", computedProtein)) }
+                    }
+                    if parseDouble(carbs) != nil {
                         HStack { Text("Carbs"); Spacer(); Text(String(format: "%.1fg", computedCarbs)) }
+                    }
+                    if parseDouble(fat) != nil {
                         HStack { Text("Fat"); Spacer(); Text(String(format: "%.1fg", computedFat)) }
                     }
                 }
@@ -117,6 +159,36 @@ struct AddEntryView: View {
                         .disabled(!isValid)
                 }
             }
+            .sheet(isPresented: $showingServingPicker) {
+                NavigationStack {
+                    Picker("Number of Servings", selection: $draftServingCount) {
+                        ForEach(1...10, id: \.self) { count in
+                            Text("\(count)").tag(count)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .labelsHidden()
+                    .navigationTitle("Number of Servings")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                showingServingPicker = false
+                            }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                servingCount = draftServingCount
+                                showingServingPicker = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.height(300)])
+            }
+            .sheet(isPresented: $showingPresetSelector) {
+                PresetSelectionView(selectedPreset: $selectedPreset)
+            }
         }
     }
     
@@ -128,6 +200,7 @@ struct AddEntryView: View {
             carbs = ""
             fat = ""
             grams = ""
+            servingCount = 1
             return
         }
         let fmt = NumberFormatter()
@@ -148,7 +221,7 @@ struct AddEntryView: View {
     
     private var isValid: Bool {
         if name.isEmpty { return false }
-        return computedCalories > 0 && parseDouble(grams) != nil
+        return computedCalories > 0 && totalGrams != nil
     }
     
     private func save() {
@@ -168,25 +241,19 @@ struct AddEntryView: View {
         
         let finalDate = calendar.date(from: finalComponents) ?? Date()
         
-        let newEntry: CalorieEntry
-        if usePreset {
-            newEntry = CalorieEntry(
-                name: name,
-                calories: computedCalories,
-                protein: computedProtein,
-                carbs: computedCarbs,
-                fat: computedFat,
-                grams: parseDouble(grams),
-                date: finalDate
-            )
-        } else {
-            newEntry = CalorieEntry(
-                name: name,
-                calories: computedCalories,
-                grams: parseDouble(grams),
-                date: finalDate
-            )
-        }
+        let newEntry = CalorieEntry(
+            name: finalEntryName,
+            calories: computedCalories,
+            protein: parseDouble(protein) == nil ? nil : computedProtein,
+            carbs: parseDouble(carbs) == nil ? nil : computedCarbs,
+            fat: parseDouble(fat) == nil ? nil : computedFat,
+            grams: totalGrams,
+            caloriesPer100g: parseDouble(calories),
+            proteinPer100g: parseDouble(protein),
+            carbsPer100g: parseDouble(carbs),
+            fatPer100g: parseDouble(fat),
+            date: finalDate
+        )
         
         modelContext.insert(newEntry)
         dismiss()
