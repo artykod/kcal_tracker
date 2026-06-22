@@ -91,19 +91,6 @@ struct AddEntryView: View {
                 
                 Section {
                     TextField("Food name", text: $name)
-                    
-                    TextField("Calories per 100g", text: $calories)
-                        .keyboardType(.decimalPad)
-                    
-                    TextField("Protein (optional)", text: $protein)
-                        .keyboardType(.decimalPad)
-                    TextField("Carbs (optional)", text: $carbs)
-                        .keyboardType(.decimalPad)
-                    TextField("Fat (optional)", text: $fat)
-                        .keyboardType(.decimalPad)
-                    
-                    TextField("Portion (grams)", text: $grams)
-                        .keyboardType(.decimalPad)
 
                     Button {
                         draftServingCount = servingCount
@@ -120,7 +107,20 @@ struct AddEntryView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    
+
+                    TextField("Calories per 100g", text: $calories)
+                        .keyboardType(.decimalPad)
+
+                    TextField("Protein (optional)", text: $protein)
+                        .keyboardType(.decimalPad)
+                    TextField("Carbs (optional)", text: $carbs)
+                        .keyboardType(.decimalPad)
+                    TextField("Fat (optional)", text: $fat)
+                        .keyboardType(.decimalPad)
+
+                    TextField("Portion (grams)", text: $grams)
+                        .keyboardType(.decimalPad)
+
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                 } header: {
                     Text("Details (per 100g)")

@@ -56,6 +56,7 @@ struct PresetsView: View {
                             .font(.caption)
                         }
                         .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -74,24 +75,17 @@ struct PresetsView: View {
                         }
                         .tint(.blue)
                     }
+                    .onAppear {
+                        if preset.id == presets.last?.id && hasMorePresets {
+                            loadNextPage()
+                        }
+                    }
                 }
                 .onDelete(perform: deleteItems)
 
-                if hasMorePresets {
-                    Button {
-                        loadNextPage()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            if isLoading {
-                                ProgressView()
-                            } else {
-                                Text("Load More")
-                            }
-                            Spacer()
-                        }
-                    }
-                    .disabled(isLoading)
+                if hasMorePresets && isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
                 }
             }
         }

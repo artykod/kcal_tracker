@@ -80,25 +80,20 @@ struct PresetSelectionView: View {
                                     }
                                 }
                                 .padding(.vertical, 3)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
-                        }
-
-                        if hasMorePresets {
-                            Button {
-                                loadNextPage()
-                            } label: {
-                                HStack {
-                                    Spacer()
-                                    if isLoading {
-                                        ProgressView()
-                                    } else {
-                                        Text("Load More")
-                                    }
-                                    Spacer()
+                            .onAppear {
+                                if preset.id == presets.last?.id && hasMorePresets {
+                                    loadNextPage()
                                 }
                             }
-                            .disabled(isLoading)
+                        }
+
+                        if hasMorePresets && isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
                         }
                     }
                 }
@@ -163,4 +158,3 @@ struct PresetSelectionView: View {
         isLoading = false
     }
 }
-

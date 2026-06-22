@@ -74,23 +74,16 @@ struct SearchEntriesView: View {
                                     .tint(.green)
                                 }
                             }
+                            .onAppear {
+                                if entry.id == entries.last?.id && hasMoreResults {
+                                    loadNextPage()
+                                }
+                            }
                     }
 
-                    if hasMoreResults {
-                        Button {
-                            loadNextPage()
-                        } label: {
-                            HStack {
-                                Spacer()
-                                if isLoading {
-                                    ProgressView()
-                                } else {
-                                    Text("Load More")
-                                }
-                                Spacer()
-                            }
-                        }
-                        .disabled(isLoading)
+                    if hasMoreResults && isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }
