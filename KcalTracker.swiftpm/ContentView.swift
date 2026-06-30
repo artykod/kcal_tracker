@@ -4,6 +4,8 @@ import SwiftData
 struct ContentView: View {
     @State private var selectedDate = Date()
     @Environment(\.modelContext) private var modelContext
+
+    private let swipeThreshold: CGFloat = 75
     
     var body: some View {
         NavigationStack {
@@ -11,7 +13,7 @@ struct ContentView: View {
                 // Date selector
                 HStack {
                     Button(action: {
-                        selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+                        moveSelectedDate(by: -1)
                     }) {
                         Image(systemName: "chevron.left")
                             .padding()
@@ -30,7 +32,7 @@ struct ContentView: View {
                     Spacer()
                     
                     Button(action: {
-                        selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+                        moveSelectedDate(by: 1)
                     }) {
                         Image(systemName: "chevron.right")
                             .padding()
@@ -40,6 +42,7 @@ struct ContentView: View {
                 .background(Color(uiColor: .systemGroupedBackground))
                 
                 DailyView(date: selectedDate)
+                    .simultaneousGesture(daySwipeGesture)
             }
             .navigationTitle("Calories Tracker")
             .navigationBarTitleDisplayMode(.inline)
@@ -61,6 +64,33 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var daySwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onEnded { value in
+                let horizontalDistance = value.translation.width
+                let verticalDistance = value.translation.height
+
+                guard abs(horizontalDistance) >= swipeThreshold,
+                      abs(horizontalDistance) > abs(verticalDistance) * 1.5 else {
+                    return
+                }
+
+                moveSelectedDate(by: horizontalDistance < 0 ? 1 : -1)
+            }
+    }
+
+    private func moveSelectedDate(by dayOffset: Int) {
+        guard let newDate = Calendar.current.date(
+            byAdding: .day,
+            value: dayOffset,
+            to: selectedDate
+        ) else { return }
+
+        withAnimation(.easeOut(duration: 0.2)) {
+            selectedDate = newDate
         }
     }
 }
