@@ -49,9 +49,9 @@ struct PresetsView: View {
                                 .foregroundColor(.secondary)
                             
                             HStack(spacing: 12) {
-                                MacroText(label: "P", value: preset.proteinPer100g)
-                                MacroText(label: "C", value: preset.carbsPer100g)
-                                MacroText(label: "F", value: preset.fatPer100g)
+                                MacroText(label: "Protein", value: preset.proteinPer100g)
+                                MacroText(label: "Carbs", value: preset.carbsPer100g)
+                                MacroText(label: "Fat", value: preset.fatPer100g)
                             }
                             .font(.caption)
                         }
