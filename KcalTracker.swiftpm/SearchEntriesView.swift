@@ -123,9 +123,9 @@ struct SearchEntriesView: View {
 
                 if entry.protein != nil || entry.carbs != nil || entry.fat != nil {
                     HStack(spacing: 8) {
-                        if let protein = entry.protein { MacroText(label: "P", value: protein) }
-                        if let carbs = entry.carbs { MacroText(label: "C", value: carbs) }
-                        if let fat = entry.fat { MacroText(label: "F", value: fat) }
+                        if let protein = entry.protein { MacroText(label: "Protein", value: protein) }
+                        if let carbs = entry.carbs { MacroText(label: "Carbs", value: carbs) }
+                        if let fat = entry.fat { MacroText(label: "Fat", value: fat) }
                     }
                     .font(.caption2)
                 }

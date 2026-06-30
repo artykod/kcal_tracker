@@ -7,6 +7,53 @@ import SwiftUI
 struct ExportData: Codable {
     var entries: [CalorieEntryDTO]
     var presets: [FoodPresetDTO]
+    var calculatorSettings: CalculatorSettingsDTO? = nil
+}
+
+struct CalculatorSettingsDTO: Codable {
+    var dailyCalorieTarget: Int?
+    var age: Int?
+    var heightCm: Double?
+    var weightKg: Double?
+    var estimateType: String?
+    var activity: String?
+    var units: String?
+
+    static func current(defaults: UserDefaults = .standard) -> CalculatorSettingsDTO {
+        CalculatorSettingsDTO(
+            dailyCalorieTarget: defaults.object(forKey: "dailyCalorieTarget") as? Int ?? 2000,
+            age: defaults.object(forKey: "calculatorAge") as? Int ?? 0,
+            heightCm: defaults.object(forKey: "calculatorHeightCm") as? Double ?? 0,
+            weightKg: defaults.object(forKey: "calculatorWeightKg") as? Double ?? 0,
+            estimateType: defaults.string(forKey: "calculatorEstimateType") ?? "range",
+            activity: defaults.string(forKey: "calculatorActivity") ?? "notSelected",
+            units: defaults.string(forKey: "calculatorUnits") ?? "metric"
+        )
+    }
+
+    func restore(defaults: UserDefaults = .standard) {
+        if let dailyCalorieTarget {
+            defaults.set(min(max(dailyCalorieTarget, 500), 10_000), forKey: "dailyCalorieTarget")
+        }
+        if let age {
+            defaults.set(age == 0 ? 0 : min(max(age, 1), 120), forKey: "calculatorAge")
+        }
+        if let heightCm, heightCm >= 0 {
+            defaults.set(heightCm, forKey: "calculatorHeightCm")
+        }
+        if let weightKg, weightKg >= 0 {
+            defaults.set(weightKg, forKey: "calculatorWeightKg")
+        }
+        if let estimateType, ["range", "femaleBased", "maleBased"].contains(estimateType) {
+            defaults.set(estimateType, forKey: "calculatorEstimateType")
+        }
+        if let activity, ["notSelected", "sedentary", "light", "moderate", "active", "veryActive"].contains(activity) {
+            defaults.set(activity, forKey: "calculatorActivity")
+        }
+        if let units, ["metric", "imperial"].contains(units) {
+            defaults.set(units, forKey: "calculatorUnits")
+        }
+    }
 }
 
 struct CalorieEntryDTO: Codable {
@@ -102,7 +149,8 @@ class DataTransferManager: ObservableObject {
         
         let exportData = ExportData(
             entries: entries.map(CalorieEntryDTO.init),
-            presets: presets.map(FoodPresetDTO.init)
+            presets: presets.map(FoodPresetDTO.init),
+            calculatorSettings: .current()
         )
         
         return AppDataDocument(data: exportData)
@@ -163,7 +211,8 @@ class DataTransferManager: ObservableObject {
                 context.insert(newPreset)
             }
         }
-        
+
         try context.save()
+        decodedData.calculatorSettings?.restore()
     }
 }
