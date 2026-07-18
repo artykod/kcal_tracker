@@ -18,7 +18,7 @@ let package = Package(
             targets: ["AppModule"],
             bundleIdentifier: "com.home.kcaltracker",
             teamIdentifier: "L82GX97HTY",
-            displayVersion: "1.3",
+            displayVersion: "1.4",
             bundleVersion: "1",
             appIcon: .asset("AppIcon"),
             accentColor: .presetColor(.orange),

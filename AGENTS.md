@@ -27,6 +27,15 @@
 - Selecting a food preset without a default portion automatically focuses its required portion input.
 - The Add Multiple Foods confirmation is a top-right `Add N` button. Total kcal or portion validation appears in the section footer.
 
+## Main screen panel
+
+- The date control and conditional `Go to Today` button are centered together. `Go to Today` appears only when the selected date is not today.
+- The date label uses the `14 Jul 2026` format and opens a native graphical date picker in a popover.
+- Previous/next arrows stay at the left and right edges and align vertically with the centered kcal total.
+- The kcal total appears above the centered Protein, Fat, Carbs summary. Macro text is compact and scales to keep larger totals on one line.
+- Search is in the bottom-left corner, Food Presets is in the bottom-right, and Add/Paste actions remain centered.
+- Horizontal day swipes work across the panel. All panel controls ignore taps while a day swipe is in progress to prevent accidental actions.
+
 ## Number input
 
 - Numeric fields use the UIKit-backed controls in `KcalTracker.swiftpm/NumericInput.swift`.

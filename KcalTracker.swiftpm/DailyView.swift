@@ -16,6 +16,8 @@ struct DailyView: View {
     @State private var showingAddEntry = false
     @State private var showingAddMultipleEntries = false
     @State private var showingClipboardHistory = false
+    @State private var showingDatePicker = false
+    @State private var isDaySwipeInProgress = false
     @State private var suppressNextPaste = false
     @State private var editingEntry: CalorieEntry?
     @State private var entryToCreatePreset: CalorieEntry?
@@ -175,68 +177,89 @@ struct DailyView: View {
                     }
                 }
 
-                VStack(spacing: 0) {
+                ZStack {
                     VStack(spacing: 0) {
-                        HStack {
-                            Button(action: onPreviousDay) {
-                                Image(systemName: "chevron.left")
-                                    .frame(width: 44, height: 40)
-                                    .contentShape(Rectangle())
-                            }
+                        HStack(spacing: 8) {
+                            panelDatePicker
 
-                            Spacer()
-
-                            DatePicker(
-                                "",
-                                selection: dateSelection,
-                                displayedComponents: .date
-                            )
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-
-                            Spacer()
-
-                            Button(action: onNextDay) {
-                                Image(systemName: "chevron.right")
-                                    .frame(width: 44, height: 40)
-                                    .contentShape(Rectangle())
+                            if !Calendar.current.isDateInToday(date) {
+                                Button {
+                                    guard !isDaySwipeInProgress else { return }
+                                    onToday()
+                                } label: {
+                                    Text("Go to Today")
+                                        .font(.subheadline.weight(.semibold))
+                                        .padding(.horizontal, 12)
+                                        .frame(height: 34)
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(Capsule())
+                                        .shadow(radius: 3, x: 0, y: 2)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 8)
+                        .frame(height: 40)
 
                         VStack(spacing: 6) {
-                            HStack(spacing: 16) {
-                                MacroText(label: "Protein", value: totalProtein)
-                                MacroText(label: "Fat", value: totalFat)
-                                MacroText(label: "Carbs", value: totalCarbs)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            HStack(spacing: 6) {
+                                Text("\(totalCalories) kcal")
+                                    .font(.title2).fontWeight(.bold)
+                                    .foregroundColor(calorieSummaryColor)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
 
-                            HStack {
-                                Spacer()
-                                HStack(spacing: 6) {
-                                    Text("\(totalCalories) kcal")
-                                        .font(.title2).fontWeight(.bold)
-                                        .foregroundColor(calorieSummaryColor)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.75)
-
-                                    if totalCalories > dailyCalorieTarget {
+                                if totalCalories > dailyCalorieTarget {
                                         NavigationLink(destination: SettingsView()) {
                                             Image(systemName: "info.circle")
                                                 .font(.title3)
                                                 .foregroundColor(calorieSummaryColor)
                                         }
                                         .accessibilityLabel("Adjust calorie target")
+                                        .disabled(isDaySwipeInProgress)
                                     }
-                                }
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 56)
+
+                            HStack(spacing: 12) {
+                                MacroText(label: "Protein", value: totalProtein)
+                                MacroText(label: "Fat", value: totalFat)
+                                MacroText(label: "Carbs", value: totalCarbs)
+                            }
+                            .font(.caption)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 16)
                         }
-                        .padding(.horizontal, 16)
                         .padding(.vertical, 10)
+
+                        bottomActionsPanel
                     }
 
-                    bottomActionsPanel
+                    HStack {
+                        Button {
+                            guard !isDaySwipeInProgress else { return }
+                            onPreviousDay()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+
+                        Spacer()
+
+                        Button {
+                            guard !isDaySwipeInProgress else { return }
+                            onNextDay()
+                        } label: {
+                            Image(systemName: "chevron.right")
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .offset(y: -26)
                 }
                 .padding(.vertical, 16)
                 .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -273,35 +296,39 @@ struct DailyView: View {
 
     private var daySwipeGesture: some Gesture {
         DragGesture(minimumDistance: 20, coordinateSpace: .global)
-            .onChanged(onDaySwipeChanged)
-            .onEnded(onDaySwipeEnded)
+            .onChanged { value in
+                isDaySwipeInProgress = true
+                onDaySwipeChanged(value)
+            }
+            .onEnded { value in
+                onDaySwipeEnded(value)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isDaySwipeInProgress = false
+                }
+            }
     }
 
     private var bottomActionsPanel: some View {
         ZStack {
             HStack {
-                NavigationLink(destination: PresetsView()) {
-                    Image(systemName: "list.bullet.clipboard")
-                        .bottomUtilityButtonStyle()
-                }
-                
                 NavigationLink(destination: SearchEntriesView()) {
                     Image(systemName: "magnifyingglass")
                         .bottomUtilityButtonStyle()
                 }
+                .disabled(isDaySwipeInProgress)
 
                 Spacer()
 
-                Button("Today", action: onToday)
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 12)
-                    .frame(height: 44)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
-                    .shadow(radius: 3, x: 0, y: 2)
+                NavigationLink(destination: PresetsView()) {
+                    Image(systemName: "list.bullet.clipboard")
+                        .bottomUtilityButtonStyle()
+                }
+                .disabled(isDaySwipeInProgress)
             }
 
             Button(action: {
+                guard !isDaySwipeInProgress else { return }
                 showingAddEntry = true
             }) {
                 Image(systemName: "plus")
@@ -330,6 +357,8 @@ struct DailyView: View {
 
             if entryClipboard.copiedEntry != nil {
                 Button {
+                    guard !isDaySwipeInProgress else { return }
+
                     if suppressNextPaste {
                         suppressNextPaste = false
                     } else if entryClipboard.entries.count > 1 {
@@ -366,6 +395,48 @@ struct DailyView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+
+    private var panelDatePicker: some View {
+        Button {
+            guard !isDaySwipeInProgress else { return }
+            showingDatePicker = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(
+                    date.formatted(
+                        Date.FormatStyle()
+                            .day()
+                            .month(.abbreviated)
+                            .year()
+                            .locale(Locale(identifier: "en_GB"))
+                    )
+                )
+
+                Image(systemName: "calendar")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 34)
+            .background(
+                Color(uiColor: .tertiarySystemFill),
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Select date")
+        .popover(isPresented: $showingDatePicker, arrowEdge: .bottom) {
+            DatePicker(
+                "Date",
+                selection: dateSelection,
+                displayedComponents: .date
+            )
+            .labelsHidden()
+            .datePickerStyle(.graphical)
+            .padding()
+            .frame(width: 320)
+            .presentationCompactAdaptation(.popover)
+        }
     }
 
     private var clipboardCountBadge: some View {
