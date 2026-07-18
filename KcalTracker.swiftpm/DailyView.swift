@@ -15,6 +15,8 @@ struct DailyView: View {
     @Query private var entries: [CalorieEntry]
     @State private var showingAddEntry = false
     @State private var showingAddMultipleEntries = false
+    @State private var showingClipboardHistory = false
+    @State private var suppressNextPaste = false
     @State private var editingEntry: CalorieEntry?
     @State private var entryToCreatePreset: CalorieEntry?
     
@@ -245,12 +247,17 @@ struct DailyView: View {
                 .padding(.bottom, 8)
             }
         }
-        .animation(.spring(), value: entryClipboard.copiedEntry != nil)
+        .animation(.spring(), value: entryClipboard.entries.count)
         .sheet(isPresented: $showingAddEntry) {
             AddEntryView(date: date)
         }
         .sheet(isPresented: $showingAddMultipleEntries) {
             AddMultipleEntriesView(date: date)
+        }
+        .sheet(isPresented: $showingClipboardHistory, onDismiss: {
+            suppressNextPaste = false
+        }) {
+            ClipboardHistoryView(onPaste: pasteEntries)
         }
         .sheet(item: $editingEntry) { entry in
             EditEntryPortionView(entry: entry)
@@ -322,7 +329,15 @@ struct DailyView: View {
             .offset(x: entryClipboard.copiedEntry == nil ? 0 : 32)
 
             if entryClipboard.copiedEntry != nil {
-                Button(action: pasteEntry) {
+                Button {
+                    if suppressNextPaste {
+                        suppressNextPaste = false
+                    } else if entryClipboard.entries.count > 1 {
+                        showingClipboardHistory = true
+                    } else {
+                        pasteNewestEntry()
+                    }
+                } label: {
                     Image(systemName: "doc.on.clipboard")
                         .font(.title.weight(.semibold))
                         .frame(width: 56, height: 56)
@@ -330,7 +345,21 @@ struct DailyView: View {
                         .foregroundColor(.white)
                         .clipShape(Circle())
                         .shadow(radius: 4, x: 0, y: 4)
+                        .overlay(alignment: .topTrailing) {
+                            if entryClipboard.entries.count > 1 {
+                                clipboardCountBadge
+                            }
+                        }
                 }
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.5)
+                        .onEnded { _ in
+                            suppressNextPaste = true
+                            showingClipboardHistory = true
+                        }
+                )
+                .accessibilityLabel("Paste newest food")
+                .accessibilityHint("Touch and hold to select multiple foods from clipboard history")
                 .offset(x: -32)
                 .transition(.scale.combined(with: .opacity))
             }
@@ -339,9 +368,30 @@ struct DailyView: View {
         .padding(.vertical, 8)
     }
 
-    private func pasteEntry() {
+    private var clipboardCountBadge: some View {
+        Text(entryClipboard.entries.count > 99 ? "99+" : "\(entryClipboard.entries.count)")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, entryClipboard.entries.count > 9 ? 5 : 0)
+            .frame(minWidth: 20, minHeight: 20)
+            .background(Color.red)
+            .clipShape(Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(Color(uiColor: .systemGroupedBackground), lineWidth: 2)
+            }
+            .offset(x: 4, y: -4)
+            .accessibilityHidden(true)
+    }
+
+    private func pasteNewestEntry() {
         guard let copied = entryClipboard.copiedEntry else { return }
-        
+        pasteEntries([copied])
+    }
+
+    private func pasteEntries(_ copiedEntries: [CopiedEntry]) {
+        guard !copiedEntries.isEmpty else { return }
+
         // Pasting entry should default to midday or current time if it's today
         let pasteTime: Date
         if Calendar.current.isDateInToday(date) {
@@ -351,20 +401,22 @@ struct DailyView: View {
             pasteTime = Calendar.current.date(byAdding: .hour, value: 12, to: startOfDay) ?? startOfDay
         }
         
-        let newEntry = CalorieEntry(
-            name: copied.name,
-            calories: copied.calories,
-            protein: copied.protein,
-            carbs: copied.carbs,
-            fat: copied.fat,
-            grams: copied.grams,
-            caloriesPer100g: copied.caloriesPer100g,
-            proteinPer100g: copied.proteinPer100g,
-            carbsPer100g: copied.carbsPer100g,
-            fatPer100g: copied.fatPer100g,
-            date: pasteTime
-        )
-        modelContext.insert(newEntry)
+        for copied in copiedEntries {
+            let newEntry = CalorieEntry(
+                name: copied.name,
+                calories: copied.calories,
+                protein: copied.protein,
+                carbs: copied.carbs,
+                fat: copied.fat,
+                grams: copied.grams,
+                caloriesPer100g: copied.caloriesPer100g,
+                proteinPer100g: copied.proteinPer100g,
+                carbsPer100g: copied.carbsPer100g,
+                fatPer100g: copied.fatPer100g,
+                date: pasteTime
+            )
+            modelContext.insert(newEntry)
+        }
     }
     
     private func deleteItems(offsets: IndexSet) {

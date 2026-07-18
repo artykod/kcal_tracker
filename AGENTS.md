@@ -35,6 +35,14 @@
 - Do not switch numeric fields back to the system decimal/number keyboard without explicit user direction.
 - Keep custom input focus state in ordinary `@State`; native text fields may use `@FocusState`.
 
+## Internal clipboard
+
+- Copied Foods are kept in a newest-first, in-memory history for 10 minutes per item.
+- On the main screen, a short paste-button tap pastes directly only when one Food is available; with multiple Foods it opens `ClipboardHistoryView` for checkbox selection. A long press also opens this selector.
+- The paste button shows a red history-count badge only when at least two Foods are available.
+- Clipboard history rows have a destructive swipe action for immediate removal.
+- The selector has a floating red `Clear` capsule that clears all history and dismisses the selector.
+
 ## Relevant views
 
 - `AddEntryView.swift`: add one food and launch multiple selection.
@@ -42,3 +50,4 @@
 - `AddPresetView.swift` / `PresetSelectionView.swift` / `PresetsView.swift`: food preset creation, selection, and list.
 - `EditEntryPortionView.swift`: edit logged food and nutrition.
 - `DailyView.swift` / `SearchEntriesView.swift`: main and search row layouts.
+- `EntryClipboard.swift` / `ClipboardHistoryView.swift`: in-memory copied-Food history and multi-paste selection.
