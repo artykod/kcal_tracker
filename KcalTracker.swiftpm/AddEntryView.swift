@@ -1,9 +1,13 @@
 import SwiftUI
 import SwiftData
 
-private func parseDouble(_ s: String) -> Double? {
-    let normalized = s.replacingOccurrences(of: Locale.current.decimalSeparator ?? ",", with: ".")
-    return Double(normalized)
+private enum AddEntryField: Hashable {
+    case name
+    case grams
+    case calories
+    case protein
+    case fat
+    case carbs
 }
 
 struct AddEntryView: View {
@@ -15,6 +19,8 @@ struct AddEntryView: View {
     @State private var time: Date
     @State private var selectedPreset: FoodPreset?
     @State private var showingPresetSelector = false
+    @State private var showingMultipleSelector = false
+    @State private var multipleEntriesWereAdded = false
     
     // Manual or Preset values
     @State private var name: String = ""
@@ -26,6 +32,8 @@ struct AddEntryView: View {
     @State private var servingCount = 1
     @State private var draftServingCount = 1
     @State private var showingServingPicker = false
+    @State private var focusedField: AddEntryField?
+    @FocusState private var nameFocused: Bool
     
     init(date: Date) {
         self.date = date
@@ -39,25 +47,25 @@ struct AddEntryView: View {
     }
     
     var computedCalories: Int {
-        guard let cal100 = parseDouble(calories), let totalGrams else { return 0 }
+        guard let cal100 = DecimalInput.parse(calories), let totalGrams else { return 0 }
         return Int((cal100 * totalGrams) / 100.0)
     }
     
     var computedProtein: Double {
-        guard let p = parseDouble(protein), let totalGrams else { return 0 }
+        guard let p = DecimalInput.parse(protein), let totalGrams else { return 0 }
         return (p * totalGrams) / 100.0
     }
     var computedCarbs: Double {
-        guard let c = parseDouble(carbs), let totalGrams else { return 0 }
+        guard let c = DecimalInput.parse(carbs), let totalGrams else { return 0 }
         return (c * totalGrams) / 100.0
     }
     var computedFat: Double {
-        guard let f = parseDouble(fat), let totalGrams else { return 0 }
+        guard let f = DecimalInput.parse(fat), let totalGrams else { return 0 }
         return (f * totalGrams) / 100.0
     }
 
     var totalGrams: Double? {
-        guard let portionGrams = parseDouble(grams), portionGrams > 0 else { return nil }
+        guard let portionGrams = DecimalInput.parse(grams), portionGrams > 0 else { return nil }
         return portionGrams * Double(servingCount)
     }
 
@@ -68,15 +76,15 @@ struct AddEntryView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Food Preset (Optional)") {
+                Section {
                     Button {
                         showingPresetSelector = true
                     } label: {
                         HStack {
-                            Text("Preset")
+                            Text("Food preset (optional)")
                                 .foregroundColor(.primary)
                             Spacer()
-                            Text(selectedPreset?.name ?? "No Preset")
+                            Text(selectedPreset?.name ?? "None")
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                             Image(systemName: "chevron.right")
@@ -84,48 +92,94 @@ struct AddEntryView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .onChange(of: selectedPreset) { _, newValue in
-                        applyPreset(newValue)
-                    }
+                    .buttonStyle(.plain)
+
+                }
+                .onChange(of: selectedPreset) { _, newValue in
+                    applyPreset(newValue)
                 }
                 
                 Section {
-                    TextField("Food name", text: $name)
+                    HStack(spacing: 12) {
+                        TextField("Food name", text: $name)
+                            .focused($nameFocused)
+                            .submitLabel(.next)
+                            .onSubmit {
+                                nameFocused = false
+                                focusedField = .grams
+                            }
 
-                    Button {
-                        draftServingCount = servingCount
-                        showingServingPicker = true
-                    } label: {
-                        HStack {
-                            Text("Number of Servings")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Text("\(servingCount)")
-                                .foregroundColor(.secondary)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        Divider()
+                            .frame(height: 24)
+
+                        HStack(spacing: 4) {
+                            DecimalKeypadTextField(
+                                "grams",
+                                text: $grams,
+                                focus: focusBinding(for: .grams),
+                                showsNext: true,
+                                textAlignment: .right,
+                                onNext: {
+                                    focusedField = .calories
+                                },
+                                onDone: {
+                                    focusedField = nil
+                                }
+                            )
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 58)
+                                .accessibilityLabel("Portion in grams")
+                            Text("g")
+                                .foregroundStyle(.secondary)
+                                .accessibilityHidden(true)
                         }
+
+                        Divider()
+                            .frame(height: 24)
+
+                        Button {
+                            draftServingCount = servingCount
+                            showingServingPicker = true
+                        } label: {
+                            HStack(spacing: 5) {
+                                Text("×\(servingCount)")
+                                    .foregroundColor(.secondary)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(minWidth: 44, minHeight: 32)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Number of servings")
+                        .accessibilityValue("\(servingCount)")
+                    }
+                    .alignmentGuide(.listRowSeparatorLeading) { dimensions in
+                        dimensions[.leading]
                     }
 
-                    TextField("Calories per 100g", text: $calories)
-                        .keyboardType(.decimalPad)
+                    VStack(spacing: 7) {
+                        HStack(alignment: .top, spacing: 8) {
+                            nutritionField("kcal", text: $calories, field: .calories, isRequired: true)
+                            nutritionField("Protein", text: $protein, field: .protein)
+                            nutritionField("Fat", text: $fat, field: .fat)
+                            nutritionField("Carbs", text: $carbs, field: .carbs)
+                        }
 
-                    TextField("Protein (optional)", text: $protein)
-                        .keyboardType(.decimalPad)
-                    TextField("Carbs (optional)", text: $carbs)
-                        .keyboardType(.decimalPad)
-                    TextField("Fat (optional)", text: $fat)
-                        .keyboardType(.decimalPad)
-
-                    TextField("Portion (grams)", text: $grams)
-                        .keyboardType(.decimalPad)
-
-                    DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                        Text("Per 100g")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 } header: {
-                    Text("Details (per 100g)")
-                } footer: {
-                    Text("Servings is a multiplier. For example, a 150 g portion with 2 servings adds 300 g and doubles calories and macros.")
+                    HStack {
+                        Text("Details")
+                        Spacer()
+                        DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                    }
                 }
                 
                 Section(header: Text("Calculated Totals")) {
@@ -136,26 +190,43 @@ struct AddEntryView: View {
                             Text("\(totalGrams.formatted(.number.precision(.fractionLength(0...2)))) g")
                         }
                     }
-                    HStack { Text("Calories"); Spacer(); Text("\(computedCalories) kcal") }
-                    if parseDouble(protein) != nil {
-                        HStack { Text("Protein"); Spacer(); Text(String(format: "%.1fg", computedProtein)) }
-                    }
-                    if parseDouble(carbs) != nil {
-                        HStack { Text("Carbs"); Spacer(); Text(String(format: "%.1fg", computedCarbs)) }
-                    }
-                    if parseDouble(fat) != nil {
-                        HStack { Text("Fat"); Spacer(); Text(String(format: "%.1fg", computedFat)) }
+
+                    HStack(alignment: .top, spacing: 8) {
+                        totalField("kcal", value: "\(computedCalories)")
+                        totalField("Protein", value: formattedMacro(computedProtein, source: protein))
+                        totalField("Fat", value: formattedMacro(computedFat, source: fat))
+                        totalField("Carbs", value: formattedMacro(computedCarbs, source: carbs))
                     }
                 }
             }
-            .navigationTitle("Add Entry")
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    multipleEntriesWereAdded = false
+                    showingMultipleSelector = true
+                } label: {
+                    Label("Add Multiple Foods", systemImage: "checklist")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 18)
+                        .frame(height: 44)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay {
+                            Capsule()
+                                .stroke(.separator.opacity(0.35), lineWidth: 0.5)
+                        }
+                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, 8)
+            }
+            .navigationTitle("Add Food")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
+                    Button("Add") { save() }
                         .disabled(!isValid)
                 }
             }
@@ -189,7 +260,97 @@ struct AddEntryView: View {
             .sheet(isPresented: $showingPresetSelector) {
                 PresetSelectionView(selectedPreset: $selectedPreset)
             }
+            .sheet(isPresented: $showingMultipleSelector, onDismiss: {
+                if multipleEntriesWereAdded {
+                    dismiss()
+                }
+            }) {
+                AddMultipleEntriesView(date: date) {
+                    multipleEntriesWereAdded = true
+                }
+            }
         }
+    }
+
+    private func nutritionField(
+        _ title: String,
+        text: Binding<String>,
+        field: AddEntryField,
+        isRequired: Bool = false
+    ) -> some View {
+        VStack(spacing: 5) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            DecimalKeypadTextField(
+                isRequired ? "0" : "—",
+                text: text,
+                focus: focusBinding(for: field),
+                showsNext: field != .carbs,
+                isBordered: true,
+                textAlignment: .center,
+                onNext: {
+                    advanceFocus(after: field)
+                },
+                onDone: {
+                    focusedField = nil
+                }
+            )
+                .accessibilityLabel("\(title) per 100 grams\(isRequired ? "" : ", optional")")
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func focusBinding(for field: AddEntryField) -> Binding<Bool> {
+        Binding(
+            get: { focusedField == field },
+            set: { isFocused in
+                if isFocused {
+                    focusedField = field
+                } else if focusedField == field {
+                    focusedField = nil
+                }
+            }
+        )
+    }
+
+    private func advanceFocus(after field: AddEntryField) {
+        switch field {
+        case .name:
+            focusedField = .grams
+        case .grams:
+            focusedField = .calories
+        case .calories:
+            focusedField = .protein
+        case .protein:
+            focusedField = .fat
+        case .fat:
+            focusedField = .carbs
+        case .carbs:
+            focusedField = nil
+        }
+    }
+
+    private func totalField(_ title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func formattedMacro(_ value: Double, source: String) -> String {
+        DecimalInput.parse(source) == nil ? "—" : String(format: "%.1fg", value)
     }
     
     private func applyPreset(_ preset: FoodPreset?) {
@@ -244,14 +405,14 @@ struct AddEntryView: View {
         let newEntry = CalorieEntry(
             name: finalEntryName,
             calories: computedCalories,
-            protein: parseDouble(protein) == nil ? nil : computedProtein,
-            carbs: parseDouble(carbs) == nil ? nil : computedCarbs,
-            fat: parseDouble(fat) == nil ? nil : computedFat,
+            protein: DecimalInput.parse(protein) == nil ? nil : computedProtein,
+            carbs: DecimalInput.parse(carbs) == nil ? nil : computedCarbs,
+            fat: DecimalInput.parse(fat) == nil ? nil : computedFat,
             grams: totalGrams,
-            caloriesPer100g: parseDouble(calories),
-            proteinPer100g: parseDouble(protein),
-            carbsPer100g: parseDouble(carbs),
-            fatPer100g: parseDouble(fat),
+            caloriesPer100g: DecimalInput.parse(calories),
+            proteinPer100g: DecimalInput.parse(protein),
+            carbsPer100g: DecimalInput.parse(carbs),
+            fatPer100g: DecimalInput.parse(fat),
             date: finalDate
         )
         

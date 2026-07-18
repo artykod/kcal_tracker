@@ -255,21 +255,15 @@ struct SettingsView: View {
                 } else {
                     LabeledContent("Height") {
                         HStack(spacing: 4) {
-                            TextField("ft", value: calculatorHeightFeet, format: .number)
-                                .keyboardType(.numberPad)
+                            IntegerValueTextField("ft", value: calculatorHeightFeet)
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 36)
                             Text("ft")
                                 .foregroundStyle(.secondary)
 
-                            TextField(
-                                "in",
-                                value: calculatorHeightInches,
-                                format: .number.precision(.fractionLength(0...1))
-                            )
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 44)
+                            DecimalValueTextField("in", value: calculatorHeightInches)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 44)
                             Text("in")
                                 .foregroundStyle(.secondary)
                         }
@@ -343,10 +337,11 @@ struct SettingsView: View {
                 }
             }
             
-            Section(footer: Text("Export your entries, foods, calorie target, and calculator settings to a JSON file. Import merges entries and foods, then restores backed-up settings. Duplicates identified by ID are ignored.")) {
+            Section(footer: Text("Export your logged foods, food presets, calorie target, and calculator settings to a JSON file. Import merges logged foods and food presets, then restores backed-up settings. Duplicates identified by ID are ignored.")) {
                 EmptyView()
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -403,14 +398,9 @@ struct SettingsView: View {
         _ prompt: String,
         value: Binding<Double?>
     ) -> some View {
-        TextField(
-            prompt,
-            value: value,
-            format: .number.precision(.fractionLength(0...1))
-        )
-        .keyboardType(.decimalPad)
-        .multilineTextAlignment(.trailing)
-        .frame(maxWidth: 100)
+        DecimalValueTextField(prompt, value: value)
+            .multilineTextAlignment(.trailing)
+            .frame(maxWidth: 100)
     }
 
     private func optionalPositiveBinding(for value: Binding<Double>) -> Binding<Double?> {

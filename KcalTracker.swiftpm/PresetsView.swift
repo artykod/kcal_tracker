@@ -25,12 +25,12 @@ struct PresetsView: View {
                     .frame(maxWidth: .infinity)
             } else if let fetchError {
                 ContentUnavailableView(
-                    "Could Not Load Presets",
+                    "Could Not Load Food Presets",
                     systemImage: "exclamationmark.triangle",
                     description: Text(fetchError)
                 )
             } else if presets.isEmpty && searchQuery.isEmpty {
-                Text("No presets yet. Add some reusable foods!")
+                Text("No food presets yet. Add some reusable foods!")
                     .foregroundColor(.secondary)
             } else if presets.isEmpty {
                 ContentUnavailableView.search(text: searchText)
@@ -40,18 +40,29 @@ struct PresetsView: View {
                         presetToEdit = preset
                     }) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(preset.name)
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            
-                            Text("\(Int(preset.caloriesPer100g)) kcal / 100g")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(preset.name)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+
+                                Spacer(minLength: 8)
+
+                                Text("\(preset.caloriesPer100g.formatted(.number.precision(.fractionLength(0...1)))) kcal")
+                                    .fontWeight(.semibold)
+                            }
                             
                             HStack(spacing: 12) {
                                 MacroText(label: "Protein", value: preset.proteinPer100g)
-                                MacroText(label: "Carbs", value: preset.carbsPer100g)
                                 MacroText(label: "Fat", value: preset.fatPer100g)
+                                MacroText(label: "Carbs", value: preset.carbsPer100g)
+
+                                Spacer(minLength: 8)
+
+                                if let grams = preset.defaultGrams, grams > 0 {
+                                    Text("\(grams.formatted(.number.precision(.fractionLength(0...2)))) g")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             .font(.caption)
                         }
@@ -90,7 +101,7 @@ struct PresetsView: View {
             }
         }
         .navigationTitle("Food Presets")
-        .searchable(text: $searchText, prompt: "Preset name")
+        .searchable(text: $searchText, prompt: "Food preset name")
         .task(id: searchQuery) {
             do {
                 try await Task.sleep(for: .milliseconds(250))
@@ -178,9 +189,9 @@ struct MacroText: View {
     
     var body: some View {
         HStack(spacing: 2) {
-            Text("\(label):")
+            Text(label)
                 .foregroundColor(.secondary)
-            Text(String(format: "%.1fg", value))
+            Text(value.formatted(.number.precision(.fractionLength(0...1))))
                 .fontWeight(.medium)
         }
     }

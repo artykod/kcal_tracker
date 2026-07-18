@@ -14,6 +14,7 @@ struct DailyView: View {
     @AppStorage("dailyCalorieTarget") private var dailyCalorieTarget = 2000
     @Query private var entries: [CalorieEntry]
     @State private var showingAddEntry = false
+    @State private var showingAddMultipleEntries = false
     @State private var editingEntry: CalorieEntry?
     @State private var entryToCreatePreset: CalorieEntry?
     
@@ -79,7 +80,7 @@ struct DailyView: View {
                         Image(systemName: "fork.knife.circle.fill")
                             .font(.system(size: 64))
                             .foregroundColor(.gray)
-                        Text("No entries for this day")
+                        Text("No foods for this day")
                             .foregroundColor(.gray)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -89,34 +90,37 @@ struct DailyView: View {
                     List {
                         Section {
                             ForEach(entries) { entry in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                                         Text(entry.name)
                                             .font(.headline)
-                                        HStack(spacing: 4) {
-                                            Text(entry.date.formatted(date: .omitted, time: .shortened))
-                                            if let grams = entry.grams {
-                                                Text("\u{2022}")
-                                                Text("\(grams.formatted(.number.precision(.fractionLength(0...2)))) g")
-                                            }
-                                        }
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                            .lineLimit(1)
 
-                                        if entry.protein != nil || entry.carbs != nil || entry.fat != nil {
-                                            HStack(spacing: 8) {
-                                                if let p = entry.protein { MacroText(label: "Protein", value: p) }
-                                                if let c = entry.carbs { MacroText(label: "Carbs", value: c) }
-                                                if let f = entry.fat { MacroText(label: "Fat", value: f) }
-                                            }
-                                            .font(.caption2)
-                                        }
+                                        Text(entry.date.formatted(date: .omitted, time: .shortened))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+
+                                        Spacer(minLength: 8)
+
+                                        Text("\(entry.calories) kcal")
+                                            .fontWeight(.semibold)
                                     }
 
-                                    Spacer()
+                                    if entry.protein != nil || entry.carbs != nil || entry.fat != nil || entry.grams != nil {
+                                        HStack(spacing: 8) {
+                                            if let p = entry.protein { MacroText(label: "Protein", value: p) }
+                                            if let f = entry.fat { MacroText(label: "Fat", value: f) }
+                                            if let c = entry.carbs { MacroText(label: "Carbs", value: c) }
 
-                                    Text("\(entry.calories) kcal")
-                                        .fontWeight(.semibold)
+                                            Spacer(minLength: 8)
+
+                                            if let grams = entry.grams {
+                                                Text("\(grams.formatted(.number.precision(.fractionLength(0...2)))) g")
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .font(.caption2)
+                                    }
                                 }
                                 .contentShape(Rectangle())
                                 .onTapGesture {
@@ -141,7 +145,7 @@ struct DailyView: View {
                                         Button {
                                             entryToCreatePreset = entry
                                         } label: {
-                                            Label("Make Preset", systemImage: "list.bullet.clipboard")
+                                            Label("Make Food Preset", systemImage: "list.bullet.clipboard")
                                         }
                                         .tint(.green)
                                     }
@@ -201,8 +205,8 @@ struct DailyView: View {
                         VStack(spacing: 6) {
                             HStack(spacing: 16) {
                                 MacroText(label: "Protein", value: totalProtein)
-                                MacroText(label: "Carbs", value: totalCarbs)
                                 MacroText(label: "Fat", value: totalFat)
+                                MacroText(label: "Carbs", value: totalCarbs)
                             }
                             .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -244,6 +248,9 @@ struct DailyView: View {
         .animation(.spring(), value: entryClipboard.copiedEntry != nil)
         .sheet(isPresented: $showingAddEntry) {
             AddEntryView(date: date)
+        }
+        .sheet(isPresented: $showingAddMultipleEntries) {
+            AddMultipleEntriesView(date: date)
         }
         .sheet(item: $editingEntry) { entry in
             EditEntryPortionView(entry: entry)
@@ -298,6 +305,20 @@ struct DailyView: View {
                     .clipShape(Circle())
                     .shadow(radius: 4, x: 0, y: 4)
             }
+            .contextMenu {
+                Button {
+                    showingAddEntry = true
+                } label: {
+                    Label("Add Food", systemImage: "plus")
+                }
+
+                Button {
+                    showingAddMultipleEntries = true
+                } label: {
+                    Label("Add Multiple Foods", systemImage: "checklist")
+                }
+            }
+            .accessibilityHint("Double-tap to add one food, or touch and hold to add multiple foods")
             .offset(x: entryClipboard.copiedEntry == nil ? 0 : 32)
 
             if entryClipboard.copiedEntry != nil {

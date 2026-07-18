@@ -27,7 +27,7 @@ struct PresetSelectionView: View {
                         dismiss()
                     } label: {
                         HStack {
-                            Text("No Preset")
+                            Text("No Food Preset")
                                 .foregroundColor(.primary)
                             Spacer()
                             if selectedPreset == nil {
@@ -38,13 +38,13 @@ struct PresetSelectionView: View {
                     }
                 }
 
-                Section("Presets") {
+                Section("Food Presets") {
                     if presets.isEmpty && isLoading {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                     } else if let fetchError {
                         ContentUnavailableView(
-                            "Could Not Load Presets",
+                            "Could Not Load Food Presets",
                             systemImage: "exclamationmark.triangle",
                             description: Text(fetchError)
                         )
@@ -58,19 +58,32 @@ struct PresetSelectionView: View {
                             } label: {
                                 HStack(alignment: .top) {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(preset.name)
-                                            .font(.headline)
-                                            .foregroundColor(.primary)
-                                        Text("\(Int(preset.caloriesPer100g)) kcal / 100g")
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                            Text(preset.name)
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                                .lineLimit(1)
+
+                                            Spacer(minLength: 8)
+
+                                            Text("\(preset.caloriesPer100g.formatted(.number.precision(.fractionLength(0...1)))) kcal")
+                                                .fontWeight(.semibold)
+                                        }
                                         HStack(spacing: 12) {
                                             MacroText(label: "Protein", value: preset.proteinPer100g)
-                                            MacroText(label: "Carbs", value: preset.carbsPer100g)
                                             MacroText(label: "Fat", value: preset.fatPer100g)
+                                            MacroText(label: "Carbs", value: preset.carbsPer100g)
+
+                                            Spacer(minLength: 8)
+
+                                            if let grams = preset.defaultGrams, grams > 0 {
+                                                Text("\(grams.formatted(.number.precision(.fractionLength(0...2)))) g")
+                                                    .foregroundStyle(.secondary)
+                                            }
                                         }
                                         .font(.caption)
                                     }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
                                     Spacer()
 
@@ -98,9 +111,9 @@ struct PresetSelectionView: View {
                     }
                 }
             }
-            .navigationTitle("Select Preset")
+            .navigationTitle("Select Food Preset")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Preset name")
+            .searchable(text: $searchText, prompt: "Food preset name")
             .task(id: searchQuery) {
                 do {
                     try await Task.sleep(for: .milliseconds(250))

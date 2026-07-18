@@ -39,7 +39,7 @@ struct SearchEntriesView: View {
                     DatePicker("Starting", selection: $sinceDate, in: ...Date(), displayedComponents: .date)
                 }
             } footer: {
-                Text(filtersSinceDate ? "Showing entries on or after the selected date." : "Showing entries from all time.")
+                Text(filtersSinceDate ? "Showing foods on or after the selected date." : "Showing foods from all time.")
             }
 
             Section("Results") {
@@ -69,7 +69,7 @@ struct SearchEntriesView: View {
                                     Button {
                                         entryToCreatePreset = entry
                                     } label: {
-                                        Label("Make Preset", systemImage: "list.bullet.clipboard")
+                                        Label("Make Food Preset", systemImage: "list.bullet.clipboard")
                                     }
                                     .tint(.green)
                                 }
@@ -88,7 +88,7 @@ struct SearchEntriesView: View {
                 }
             }
         }
-        .navigationTitle("Search Entries")
+        .navigationTitle("Search Foods")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Food name")
         .task(id: searchCriteria) {
@@ -106,35 +106,33 @@ struct SearchEntriesView: View {
     }
 
     private func entryRow(_ entry: CalorieEntry) -> some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(entry.name)
                     .font(.headline)
+                    .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                    if let grams = entry.grams {
-                        Text("\u{2022}")
-                        Text("\(grams.formatted(.number.precision(.fractionLength(0...2)))) g")
-                    }
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
+                Spacer(minLength: 8)
 
-                if entry.protein != nil || entry.carbs != nil || entry.fat != nil {
-                    HStack(spacing: 8) {
-                        if let protein = entry.protein { MacroText(label: "Protein", value: protein) }
-                        if let carbs = entry.carbs { MacroText(label: "Carbs", value: carbs) }
-                        if let fat = entry.fat { MacroText(label: "Fat", value: fat) }
-                    }
-                    .font(.caption2)
-                }
+                Text("\(entry.calories) kcal")
+                    .fontWeight(.semibold)
             }
 
-            Spacer()
+            if entry.protein != nil || entry.carbs != nil || entry.fat != nil || entry.grams != nil {
+                HStack(spacing: 8) {
+                    if let protein = entry.protein { MacroText(label: "Protein", value: protein) }
+                    if let fat = entry.fat { MacroText(label: "Fat", value: fat) }
+                    if let carbs = entry.carbs { MacroText(label: "Carbs", value: carbs) }
 
-            Text("\(entry.calories) kcal")
-                .fontWeight(.semibold)
+                    Spacer(minLength: 8)
+
+                    if let grams = entry.grams {
+                        Text("\(grams.formatted(.number.precision(.fractionLength(0...2)))) g")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.caption2)
+            }
         }
     }
 
